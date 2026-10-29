@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appel patient</title>
+<link rel="stylesheet" href="/static/commun.css">
+<style>
+  .formulaire { display: grid; gap: 14px; grid-template-columns: 170px 1fr 120px; align-items: end; }
+  .civilite { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+  .civilite legend { font-weight: 600; font-size: .9rem; padding: 0; margin-bottom: 6px; }
+  .civilite .choix { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .civilite input { position: absolute; opacity: 0; pointer-events: none; }
+  .civilite label {
+    display: grid; place-items: center; padding: 9px 0; border: 1px solid var(--champ-trait); border-radius: 10px;
+    background: var(--carte); cursor: pointer; font-size: 1.05rem; transition: background .15s, border-color .15s;
+  }
+  .civilite label:hover { border-color: var(--accent); }
+  .civilite input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--sur-sombre); }
+  .civilite input:focus-visible + label { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px; }
+  .formulaire .bouton, .formulaire .apercu { grid-column: 1 / -1; }
+  .apercu {
+    margin: 0; padding: 14px 16px; border-radius: 10px; background: var(--accent-clair);
+    color: var(--accent-fonce); font-size: 1.1rem; font-weight: 600; min-height: 1.45em;
+  }
+  .apercu.vide-apercu { background: var(--neutre-clair); color: var(--doux); font-weight: 400; }
+  .choix-salles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .choix-salles a {
+    display: grid; gap: 2px; padding: 16px; border: 1px solid var(--trait); border-radius: 10px;
+    background: var(--carte); text-decoration: none; color: var(--encre);
+  }
+  .choix-salles a:hover { border-color: var(--accent); background: var(--accent-clair); }
+  .choix-salles strong { font-size: 1.15rem; }
+  @media (max-width: 600px) {
+    .formulaire { grid-template-columns: 1fr 1fr; }
+    .formulaire .civilite { grid-column: 1 / -1; }
+    .formulaire .nom { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<header class="entete">
+  <div class="titre">
+    <h1 id="titre">Appel patient</h1>
+    <span class="sous-titre" id="sous-titre"></span>
+  </div>
+  <span class="etat-connexion" id="connexion">Connexion…</span>
+</header>
+
+<main class="page" id="page-choix" hidden>
+  <section class="carte">
+    <h2>Choisissez votre salle</h2>
+    <p>Ajoutez ensuite la page à vos favoris, ou téléchargez le raccourci de bureau depuis la page Contenus : elle s'ouvrira directement sur votre salle.</p>
+    <div class="choix-salles" id="choix-salles"></div>
+  </section>
+</main>
+
+<main class="page" id="page-appel" hidden>
+  <section class="carte">
+    <h2>Appeler un patient</h2>
+    <form class="formulaire" id="formulaire" autocomplete="off">
+      <fieldset class="civilite" id="civilite">
+        <legend>Civilité</legend>
+        <div class="choix">
+          <input type="radio" name="civilite" id="civ-mme" value="Mme" required><label for="civ-mme">Mme</label>
+          <input type="radio" name="civilite" id="civ-m" value="M."><label for="civ-m">M.</label>
+        </div>
+      </fieldset>
+      <label class="nom">Nom de famille
+        <input type="text" id="nom" maxlength="40" required autocapitalize="words" spellcheck="false">
+      </label>
+      <label title="À remplir seulement en cas d'homonymes">Initiale prénom
+        <input type="text" id="precision" maxlength="1" placeholder="facultatif">
+      </label>
+      <p class="apercu vide-apercu" id="apercu" aria-live="polite">L'aperçu du message s'affichera ici.</p>
+      <button class="bouton grand" type="submit" id="bouton-appeler">Appeler</button>
+    </form>
+  </section>
+
+  <section class="carte">
+    <h2 id="titre-liste">Appels de la salle</h2>
+    <ul class="liste" id="liste-appels"></ul>
+    <p class="vide" id="aucun-appel">Aucun appel récent.</p>
+  </section>
+</main>
+
+<script src="/static/commun.js"></script>
+<script>
+  const salle = new URLSearchParams(location.search).get("salle");
+  const $ = (id) => document.getElementById(id);
+  let etat = null;
+  let decalage = 0;
+  let salleInconnueSignalee = false;
+
+  const civilite = () => document.querySelector("input[name=civilite]:checked")?.value || "";
+
+  function phrase() {
+    const civ = civilite();
+    const nom = $("nom").value.trim().replace(/\s+/g, " ");
+    const ini = $("precision").value.trim().toUpperCase();
+    if (!civ || !nom) return "";
+    const accord = civ === "Mme" ? "attendue" : "attendu";
+    return `${civ} ${nom}${ini ? " " + ini + "." : ""} est ${accord} en salle ${salle}`;
+  }
+
+  function majApercu() {
+    const p = phrase();
+    $("apercu").textContent = p || "L'aperçu du message s'affichera ici.";
+    $("apercu").classList.toggle("vide-apercu", !p);
+  }
+
+  function afficherChoix(e) {
+    $("page-choix").hidden = false;
+    $("page-appel").hidden = true;
+    $("titre").textContent = "Appel patient";
+    $("sous-titre").textContent = e.cabinet;
+    const conteneur = $("choix-salles");
+    conteneur.replaceChildren(...e.salles.map((s) =>
+      elt("a", { href: `/appel?salle=${encodeURIComponent(s.salle)}` },
+        elt("strong", {}, `Salle ${s.salle}`),
+        elt("span", { class: "aide" }, [s.pole, s.praticien || "Praticien non renseigné"].filter(Boolean).join(" · ")))));
+  }
+
+  function statutBadge(a) {
+    if (a.statut === "affiche") return elt("span", { class: "badge affiche" }, "À l'écran");
+    if (a.statut === "attente") return elt("span", { class: "badge attente" }, "En attente");
+    const maintenant = Date.now() / 1000 + decalage;
+    return elt("span", { class: "badge" }, `Affiché ${ilYa(maintenant - a.affiche_a)}`);
+  }
+
+  function afficherAppels(e) {
+    const s = e.salles.find((x) => x.salle === salle);
+    if (!s) {
+      $("page-appel").hidden = true;
+      $("page-choix").hidden = false;
+      afficherChoix(e);
+      if (!salleInconnueSignalee) notifier(`La salle ${salle} n'existe pas.`, true);
+      salleInconnueSignalee = true;
+      return;
+    }
+    $("page-choix").hidden = true;
+    $("page-appel").hidden = false;
+    $("titre").textContent = `Salle ${salle}`;
+    $("sous-titre").textContent = [s.pole, s.praticien].filter(Boolean).join(" · ") || e.cabinet;
+    document.title = `Appel – salle ${salle}`;
+    $("titre-liste").textContent = `Appels de la salle ${salle}`;
+
+    const appels = [e.actuel, ...e.attente, ...e.recents].filter((a) => a && a.salle === salle);
+    $("aucun-appel").hidden = appels.length > 0;
+    $("liste-appels").replaceChildren(...appels.map((a) =>
+      elt("li", {},
+        elt("div", { class: "appel-texte" }, elt("strong", {}, a.identite), statutBadge(a)),
+        elt("div", { class: "actions" },
+          elt("button", { class: "bouton secondaire petit", type: "button", onclick: () => action("/api/rappel", a.id, "Patient rappelé.") }, "Rappeler"),
+          elt("button", { class: "bouton danger petit", type: "button", onclick: () => action("/api/annulation", a.id, "Appel annulé.") }, "Annuler")))));
+  }
+
+  async function action(url, id, message) {
+    try { await envoyerJson(url, { id }); notifier(message); }
+    catch (err) { notifier(err.message, true); }
+  }
+
+  $("formulaire").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const bouton = $("bouton-appeler");
+    bouton.disabled = true;
+    try {
+      const appel = await envoyerJson("/api/appel", {
+        salle, civilite: civilite(), nom: $("nom").value, precision: $("precision").value,
+      });
+      notifier(`Appel envoyé : ${appel.identite}`);
+      $("formulaire").reset();
+      majApercu();
+      $("civ-mme").focus();
+    } catch (err) {
+      notifier(err.message, true);
+    } finally {
+      bouton.disabled = false;
+    }
+  });
+  ["civilite", "nom", "precision"].forEach((id) => $(id).addEventListener("input", majApercu));
+
+  ecouterEtat((e) => {
+    etat = e;
+    decalage = e.maintenant - Date.now() / 1000;
+    if (!salle) afficherChoix(e); else afficherAppels(e);
+  }, $("connexion"));
+  // Rafraîchit les « il y a x min » sans attendre le serveur.
+  setInterval(() => { if (etat && salle) afficherAppels(etat); }, 30000);
+</script>
+</body>
+</html>

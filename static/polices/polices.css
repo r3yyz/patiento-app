@@ -1,0 +1,5 @@
+/* Atkinson Hyperlegible Next, sous-ensemble latin, servie en local (licence : LICENCE-OFL.txt) */
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-style: normal; font-weight: 400; font-display: swap; src: url("/static/polices/atkinson-400.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-style: normal; font-weight: 600; font-display: swap; src: url("/static/polices/atkinson-600.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-style: normal; font-weight: 700; font-display: swap; src: url("/static/polices/atkinson-700.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-style: normal; font-weight: 800; font-display: swap; src: url("/static/polices/atkinson-800.woff2") format("woff2"); }

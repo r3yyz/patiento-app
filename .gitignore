@@ -1,0 +1,9 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+*.log
+
+# Données locales : configuration réelle, diaporama, conversions en cours
+data/*
+!data/config.example.json

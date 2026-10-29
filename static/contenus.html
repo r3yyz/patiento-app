@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contenus de l'écran</title>
+<link rel="stylesheet" href="/static/commun.css">
+<style>
+  .depot {
+    display: grid; place-items: center; gap: 6px; text-align: center; padding: 28px 16px;
+    border: 2px dashed var(--champ-trait); border-radius: 12px; background: var(--surface); cursor: pointer; transition: .15s;
+  }
+  .depot:hover, .depot.survol { border-color: var(--accent); background: var(--accent-clair); }
+  .depot strong { font-size: 1.05rem; }
+  .depot input { display: none; }
+  .statut { margin: 0; padding: 10px 14px; border-radius: 9px; font-size: .92rem; }
+  .statut.en_cours { background: var(--attente); color: var(--attente-encre); }
+  .statut.ok { background: var(--accent-clair); color: var(--accent-fonce); }
+  .statut.erreur { background: var(--alerte-clair); color: var(--alerte); }
+  .barre { height: 6px; border-radius: 3px; background: var(--neutre); overflow: hidden; }
+  .barre span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .vignettes { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .vignettes img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: var(--vignette); border-radius: 6px; }
+  .salle-ligne { display: grid; grid-template-columns: 90px 1fr 1fr 80px; gap: 10px; align-items: center; }
+  .lien-ligne { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; }
+  .salle-entete { font-size: .8rem; font-weight: 700; color: var(--doux); text-transform: uppercase; letter-spacing: .04em; }
+  .lien-ligne { padding: 10px 14px; border: 1px solid var(--trait); border-radius: 10px; background: var(--surface); }
+  .lien-ligne .lien-texte { display: grid; gap: 2px; min-width: 0; }
+  .lien-ligne code { font-size: .85rem; color: var(--doux); overflow-wrap: anywhere; }
+  .titre-carte { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  nav.sommaire {
+    display: flex; gap: 8px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5;
+    padding: 10px 16px; margin: -10px -16px; background: var(--fond);
+  }
+  section.carte { scroll-margin-top: 64px; }
+  nav.sommaire a:hover { border-color: var(--accent); color: var(--accent); }
+  nav.sommaire a { font-size: .9rem; padding: 6px 12px; border-radius: 99px; background: var(--carte); border: 1px solid var(--trait); text-decoration: none; color: var(--encre); }
+  @media (max-width: 600px) {
+    .salle-ligne { grid-template-columns: 1fr; }
+    .lien-ligne { grid-template-columns: 1fr 1fr; }
+    .lien-ligne .lien-texte { grid-column: 1 / -1; }
+    nav.sommaire { flex-wrap: nowrap; overflow-x: auto; }
+    nav.sommaire a { white-space: nowrap; }
+    .salle-entete { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="entete">
+  <div class="titre">
+    <h1>Contenus de l'écran</h1>
+    <span class="sous-titre" id="cabinet"></span>
+  </div>
+  <span class="etat-connexion" id="connexion">Connexion…</span>
+</header>
+
+<main class="page large">
+  <nav class="sommaire">
+    <a href="#diaporama">Diaporama</a><a href="#messages">Messages</a><a href="#salles">Salles</a>
+    <a href="#liens">Liens d'appel</a><a href="#reglages">Réglages</a><a href="/ecran" target="_blank">Voir l'écran ↗</a>
+  </nav>
+
+  <section class="carte" id="diaporama">
+    <div class="titre-carte">
+      <h2>Diaporama</h2>
+      <button class="bouton danger petit" id="supprimer-diapo" type="button" hidden>Retirer le diaporama</button>
+    </div>
+    <p>Déposez une présentation PowerPoint (ou un PDF, une image) : elle remplace le diaporama actuel. Format conseillé : 16:9, gros caractères. Les animations et transitions ne sont pas reprises.</p>
+    <label class="depot" id="depot">
+      <strong>Glisser le fichier ici, ou cliquer pour le choisir</strong>
+      <span class="aide">PowerPoint (.pptx, .ppt), PDF, PNG ou JPG</span>
+      <input type="file" id="fichier" accept=".pptx,.ppt,.ppsx,.pps,.odp,.pdf,.png,.jpg,.jpeg">
+    </label>
+    <div class="barre" id="barre" hidden><span></span></div>
+    <p class="statut" id="statut" hidden></p>
+    <p class="aide" id="info-diapo"></p>
+    <div class="vignettes" id="vignettes"></div>
+  </section>
+
+  <section class="carte" id="messages">
+    <h2>Messages</h2>
+    <p>Ils défilent en bas de l'écran. Une date de fin les retire automatiquement le lendemain.</p>
+    <form class="ligne" id="form-message" autocomplete="off">
+      <label style="grid-column: span 2">Texte
+        <input type="text" id="texte-message" maxlength="200" required placeholder="Ex. : le cabinet sera fermé le mercredi 11 novembre">
+      </label>
+      <label>Jusqu'au (facultatif)
+        <input type="date" id="date-message">
+      </label>
+      <button class="bouton" type="submit">Ajouter</button>
+    </form>
+    <ul class="liste" id="liste-messages"></ul>
+    <p class="vide" id="aucun-message">Aucun message.</p>
+  </section>
+
+  <section class="carte" id="salles">
+    <div class="titre-carte">
+      <h2>Salles, pôles et praticiens</h2>
+      <button class="bouton secondaire petit" id="ajouter-salle" type="button">+ Ajouter une salle</button>
+    </div>
+    <p>Ces informations s'affichent en permanence en bas de l'écran. Laissez le nom du praticien vide pour masquer une salle de l'écran ; le pôle sert à regrouper les salles.</p>
+    <form id="form-salles" style="display:grid; gap:10px">
+      <div class="salle-ligne salle-entete" aria-hidden="true"><span>N° salle</span><span>Pôle</span><span>Praticien</span><span></span></div>
+      <div id="lignes-salles" style="display:grid; gap:10px"></div>
+      <div><button class="bouton" type="submit">Enregistrer les salles</button></div>
+    </form>
+  </section>
+
+  <section class="carte" id="liens">
+    <h2>Liens d'appel des praticiens</h2>
+    <p>Chaque praticien garde le lien de sa salle en favori, ou télécharge le raccourci et le place sur son bureau.</p>
+    <div id="liste-liens" style="display:grid; gap:10px"></div>
+  </section>
+
+  <section class="carte" id="reglages">
+    <h2>Réglages</h2>
+    <form id="form-reglages" style="display:grid; gap:14px">
+      <label>Nom affiché en haut de l'écran
+        <input type="text" id="r-cabinet" maxlength="80" required>
+      </label>
+      <div class="ligne">
+        <label>Durée d'un appel (s)
+          <input type="number" id="r-duree-appel" min="5" max="120" required>
+        </label>
+        <label>Durée par diapositive (s)
+          <input type="number" id="r-duree-diapo" min="3" max="120" required>
+        </label>
+        <label>Derniers appels visibles (min)
+          <input type="number" id="r-historique" min="1" max="30" required>
+        </label>
+      </div>
+      <div class="ligne">
+        <label>Écran allumé de
+          <input type="time" id="r-debut" required>
+        </label>
+        <label>à
+          <input type="time" id="r-fin" required>
+        </label>
+      </div>
+      <p class="aide">En dehors de ces horaires, l'écran passe au noir. Un appel reste toujours affiché.</p>
+      <div><button class="bouton" type="submit">Enregistrer les réglages</button></div>
+    </form>
+  </section>
+</main>
+
+<script src="/static/commun.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let etat = null;
+  let premierChargement = true;
+  let sallesModifiees = false;
+  let reglagesModifies = false;
+
+  // ---------- Diaporama ----------
+  function televerser(fichier) {
+    if (!fichier) return;
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/diaporama");
+    xhr.setRequestHeader("X-Nom-Fichier", encodeURIComponent(fichier.name));
+    $("barre").hidden = false;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) $("barre").firstElementChild.style.width = `${(100 * e.loaded) / e.total}%`;
+    };
+    xhr.onloadend = () => {
+      $("barre").hidden = true;
+      $("barre").firstElementChild.style.width = "0";
+      if (xhr.status >= 400) {
+        let msg = "Envoi impossible.";
+        try { msg = JSON.parse(xhr.responseText).erreur || msg; } catch (e) {}
+        notifier(msg, true);
+      }
+    };
+    xhr.send(fichier);
+  }
+  $("fichier").addEventListener("change", (e) => { televerser(e.target.files[0]); e.target.value = ""; });
+  const depot = $("depot");
+  ["dragenter", "dragover"].forEach((t) => depot.addEventListener(t, (e) => { e.preventDefault(); depot.classList.add("survol"); }));
+  ["dragleave", "drop"].forEach((t) => depot.addEventListener(t, (e) => { e.preventDefault(); depot.classList.remove("survol"); }));
+  depot.addEventListener("drop", (e) => televerser(e.dataTransfer.files[0]));
+  $("supprimer-diapo").addEventListener("click", async () => {
+    if (!confirm("Retirer le diaporama de l'écran ?")) return;
+    try { await envoyerJson("/api/diaporama/suppression"); notifier("Diaporama retiré."); }
+    catch (err) { notifier(err.message, true); }
+  });
+
+  function rendreDiaporama(e) {
+    const c = e.conversion;
+    $("statut").hidden = c.etat === "inactif";
+    $("statut").className = `statut ${c.etat}`;
+    $("statut").textContent = c.message;
+    const d = e.diaporama;
+    $("supprimer-diapo").hidden = !d.images.length;
+    $("info-diapo").textContent = d.images.length
+      ? `En ligne : « ${d.source} », ${d.images.length} diapositive(s), mis à jour le ${d.date}.`
+      : "Aucun diaporama : l'écran affiche un message de bienvenue.";
+    const actuelles = [...$("vignettes").querySelectorAll("img")].map((i) => i.getAttribute("src")).join("|");
+    if (actuelles !== d.images.join("|")) {
+      $("vignettes").replaceChildren(...d.images.map((src, i) => elt("img", { src, alt: `Diapositive ${i + 1}`, loading: "lazy" })));
+    }
+  }
+
+  // ---------- Messages ----------
+  $("form-message").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    try {
+      await envoyerJson("/api/messages", { texte: $("texte-message").value, jusqu_au: $("date-message").value });
+      ev.target.reset();
+      notifier("Message ajouté.");
+    } catch (err) { notifier(err.message, true); }
+  });
+
+  function rendreMessages(e) {
+    const aujourdhui = new Date().toLocaleDateString("sv-SE");
+    $("aucun-message").hidden = e.messages.length > 0;
+    $("liste-messages").replaceChildren(...e.messages.map((m) => {
+      const expire = m.jusqu_au && m.jusqu_au < aujourdhui;
+      const fin = m.jusqu_au ? new Date(m.jusqu_au + "T12:00").toLocaleDateString("fr-FR") : null;
+      return elt("li", {},
+        elt("div", { class: "appel-texte" }, elt("strong", {}, m.texte), " ",
+          elt("span", { class: expire ? "badge" : "badge affiche" }, expire ? "Expiré" : fin ? `Jusqu'au ${fin}` : "Permanent")),
+        elt("div", { class: "actions" },
+          elt("button", { class: "bouton danger petit", type: "button", onclick: async () => {
+            try { await envoyerJson("/api/messages/suppression", { id: m.id }); notifier("Message supprimé."); }
+            catch (err) { notifier(err.message, true); }
+          } }, "Supprimer")));
+    }));
+  }
+
+  // ---------- Salles ----------
+  function ligneSalle(s = { salle: "", pole: "", praticien: "" }) {
+    const ligne = elt("div", { class: "salle-ligne" },
+      elt("input", { type: "text", maxlength: "10", value: s.salle, placeholder: "N° salle", "aria-label": "Numéro de salle", required: "" }),
+      elt("input", { type: "text", maxlength: "40", value: s.pole || "", placeholder: "Pôle (ex. : Médecine)", "aria-label": "Pôle" }),
+      elt("input", { type: "text", maxlength: "60", value: s.praticien, placeholder: "Nom du praticien (ex. : Dr Dupont)", "aria-label": "Praticien" }),
+      elt("button", { class: "bouton danger petit", type: "button", onclick: () => { ligne.remove(); sallesModifiees = true; } }, "Retirer"));
+    ligne.addEventListener("input", () => { sallesModifiees = true; });
+    return ligne;
+  }
+  function rendreSalles(e) {
+    if (sallesModifiees) return; // ne pas écraser une saisie en cours
+    $("lignes-salles").replaceChildren(...e.salles.map(ligneSalle));
+  }
+  $("ajouter-salle").addEventListener("click", () => {
+    sallesModifiees = true;
+    const ligne = ligneSalle();
+    $("lignes-salles").append(ligne);
+    ligne.querySelector("input").focus();
+  });
+  $("form-salles").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const salles = [...$("lignes-salles").children].map((l) => {
+      const [n, po, p] = l.querySelectorAll("input");
+      return { salle: n.value, pole: po.value, praticien: p.value };
+    });
+    try {
+      await envoyerJson("/api/salles", { salles });
+      sallesModifiees = false;
+      notifier("Salles enregistrées.");
+      rendreSalles(etat);
+    } catch (err) { notifier(err.message, true); }
+  });
+
+  // ---------- Liens ----------
+  function rendreLiens(e) {
+    $("liste-liens").replaceChildren(...e.salles.map((s) => {
+      const url = `${location.origin}/appel?salle=${encodeURIComponent(s.salle)}`;
+      return elt("div", { class: "lien-ligne" },
+        elt("div", { class: "lien-texte" },
+          elt("strong", {}, [`Salle ${s.salle}`, s.pole, s.praticien].filter(Boolean).join(" · ")),
+          elt("code", {}, url)),
+        elt("button", { class: "bouton secondaire petit", type: "button", onclick: async () => {
+          try { await navigator.clipboard.writeText(url); notifier("Lien copié."); }
+          catch (err) { prompt("Copiez le lien :", url); }
+        } }, "Copier"),
+        elt("a", { class: "bouton secondaire petit", href: `/raccourci/${encodeURIComponent(s.salle)}.url` }, "Raccourci bureau"));
+    }));
+  }
+
+  // ---------- Réglages ----------
+  $("form-reglages").addEventListener("input", () => { reglagesModifies = true; });
+  function rendreReglages(e) {
+    if (reglagesModifies) return;
+    $("r-cabinet").value = e.cabinet;
+    $("r-duree-appel").value = e.duree_appel;
+    $("r-duree-diapo").value = e.duree_diapo;
+    $("r-historique").value = e.duree_historique;
+    $("r-debut").value = e.horaires.debut;
+    $("r-fin").value = e.horaires.fin;
+  }
+  $("form-reglages").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    try {
+      await envoyerJson("/api/reglages", {
+        cabinet: $("r-cabinet").value,
+        duree_appel: Number($("r-duree-appel").value),
+        duree_diapo: Number($("r-duree-diapo").value),
+        duree_historique: Number($("r-historique").value),
+        horaires: { debut: $("r-debut").value, fin: $("r-fin").value },
+      });
+      reglagesModifies = false;
+      notifier("Réglages enregistrés.");
+    } catch (err) { notifier(err.message, true); }
+  });
+
+  ecouterEtat((e) => {
+    etat = e;
+    $("cabinet").textContent = e.cabinet;
+    rendreDiaporama(e);
+    rendreMessages(e);
+    rendreSalles(e);
+    rendreLiens(e);
+    rendreReglages(e);
+    if (premierChargement && location.hash) { premierChargement = false; document.querySelector(location.hash)?.scrollIntoView(); }
+  }, $("connexion"));
+</script>
+</body>
+</html>

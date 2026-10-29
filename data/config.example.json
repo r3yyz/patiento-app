@@ -1,0 +1,85 @@
+{
+  "cabinet": "Maison de santé des Tilleuls",
+  "salles": [
+    {
+      "salle": "1",
+      "pole": "Médecine",
+      "praticien": "Dr Exemple"
+    },
+    {
+      "salle": "2",
+      "pole": "Médecine",
+      "praticien": "Dr Modèle"
+    },
+    {
+      "salle": "3",
+      "pole": "Médecine",
+      "praticien": ""
+    },
+    {
+      "salle": "4",
+      "pole": "Médecine",
+      "praticien": ""
+    },
+    {
+      "salle": "5",
+      "pole": "Médecine",
+      "praticien": ""
+    },
+    {
+      "salle": "6",
+      "pole": "Médecine",
+      "praticien": ""
+    },
+    {
+      "salle": "7",
+      "pole": "Médecine",
+      "praticien": ""
+    },
+    {
+      "salle": "8",
+      "pole": "Dentaire",
+      "praticien": "Dr Démo"
+    },
+    {
+      "salle": "9",
+      "pole": "Dentaire",
+      "praticien": ""
+    },
+    {
+      "salle": "10",
+      "pole": "Kinésithérapie",
+      "praticien": ""
+    },
+    {
+      "salle": "11",
+      "pole": "Kinésithérapie",
+      "praticien": ""
+    },
+    {
+      "salle": "12",
+      "pole": "Infirmiers",
+      "praticien": ""
+    }
+  ],
+  "messages": [
+    {
+      "id": "exemple1",
+      "texte": "Message d'exemple : fermeture exceptionnelle le 1er mai",
+      "jusqu_au": "2099-05-01"
+    }
+  ],
+  "duree_appel": 25,
+  "duree_diapo": 10,
+  "duree_historique": 5,
+  "horaires": {
+    "debut": "08:00",
+    "fin": "21:00"
+  },
+  "diaporama": {
+    "version": "",
+    "fichiers": [],
+    "source": "",
+    "date": ""
+  }
+}

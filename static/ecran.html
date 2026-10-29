@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Écran salle d'attente</title>
+<link rel="stylesheet" href="/static/polices/polices.css">
+<style>
+  :root {
+    --nuit: #0b1730;
+    --nuit-2: #13254a;
+    --texte: #f5f7fa;
+    --doux: #a8b6cc;
+    --accent: #1e4fc2;
+    --accent-vif: #3fd0e0;
+    --sable: #f5f7fa;
+    --noir: #000;
+    --appel-clair: #2b62dc;
+    --appel-fonce: #123a94;
+    --recents-fond: rgba(11, 23, 48, .9);
+    --recents-trait: rgba(255, 255, 255, .12);
+    --progression: rgba(255, 255, 255, .55);
+    --son-fond: #f6c453;
+    --son-texte: #2b1d00;
+    --alerte: #b0412a;
+    --sur-alerte: #fff;
+    font-family: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, "DejaVu Sans", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--nuit); color: var(--texte); cursor: none; }
+
+  .ecran { display: grid; grid-template-rows: 9vh 1fr auto; height: 100vh; }
+
+  /* En-tête */
+  .haut { display: flex; align-items: center; justify-content: space-between; padding: 0 3vw; background: var(--nuit); }
+  .cabinet { font-size: 3.2vh; font-weight: 700; letter-spacing: .01em; display: flex; align-items: center; gap: 1.2vw; }
+  .cabinet::before { content: ""; width: .7vh; height: 4.4vh; border-radius: 1vh; background: linear-gradient(var(--accent-vif), var(--accent)); }
+  .horloge { display: flex; align-items: baseline; gap: 1.4vw; }
+  .heure { font-size: 4.4vh; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .date { font-size: 2.6vh; color: var(--doux); }
+
+  /* Zone centrale : diaporama */
+  .centre { position: relative; background: var(--noir); overflow: hidden; }
+  .diapo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.2s ease; }
+  .diapo.visible { opacity: 1; }
+  .accueil {
+    position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 2vh;
+    background: radial-gradient(ellipse at 30% 20%, var(--nuit-2), var(--nuit) 70%);
+  }
+  .accueil .bienvenue { font-size: 4vh; color: var(--accent-vif); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+  .accueil .nom-cabinet { font-size: 7vh; font-weight: 700; }
+
+  /* Derniers appels */
+  .recents {
+    position: absolute; right: 2vw; bottom: 2.5vh; min-width: 26vw; max-width: 40vw;
+    background: var(--recents-fond); border: 1px solid var(--recents-trait); border-radius: 1.4vh;
+    padding: 1.8vh 2vw; backdrop-filter: blur(6px); transition: opacity .4s;
+  }
+  .recents h2 { margin: 0 0 1vh; font-size: 2.1vh; text-transform: uppercase; letter-spacing: .1em; color: var(--accent-vif); }
+  .recents ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .8vh; }
+  .recents li { display: flex; justify-content: space-between; gap: 2vw; font-size: 3.2vh; }
+  .recents li .salle { font-weight: 700; white-space: nowrap; }
+  .recents li .patient { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Bas : salles et messages */
+  .bas { background: var(--nuit); }
+  .salles { display: flex; flex-wrap: wrap; justify-content: center; gap: .6vh 3.2vw; padding: 1.6vh 3vw; font-size: 2.8vh; }
+  .salles span b { color: var(--accent-vif); margin-right: .6vw; }
+  .salles i.pole { font-style: normal; text-transform: uppercase; letter-spacing: .08em; font-size: .75em; color: var(--doux); align-self: center; }
+  .messages { background: var(--sable); color: var(--nuit); font-size: 3.2vh; font-weight: 600; height: 6.4vh; overflow: hidden; position: relative; }
+  .messages .piste { position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; white-space: nowrap; padding-left: 3vw; }
+  .messages .piste.defile { animation: defiler linear infinite; padding-left: 0; }
+  .messages .piste span { padding-right: 6vw; }
+  @keyframes defiler { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* Appel plein écran */
+  .appel {
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(ellipse at 50% 35%, var(--appel-clair), var(--accent) 55%, var(--appel-fonce));
+    animation: entree .5s ease;
+  }
+  @keyframes entree { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: none; } }
+  .appel .contenu { display: grid; gap: 2.4vh; padding: 0 5vw; }
+  .appel .nom { font-size: 13vh; font-weight: 800; line-height: 1.05; letter-spacing: -.01em; white-space: nowrap; justify-self: center; }
+  .appel .suite { font-size: 5.2vh; opacity: .9; }
+  .appel .salle {
+    justify-self: center; font-size: 15vh; font-weight: 800; line-height: 1; padding: 2.2vh 5vw;
+    background: var(--accent-vif); color: var(--nuit); border-radius: 2.4vh; margin-top: 1vh;
+  }
+  .appel .praticien { font-size: 3.6vh; opacity: .85; }
+  .appel .progression { position: absolute; left: 0; bottom: 0; height: 1vh; background: var(--progression); width: 100%; transform-origin: left; }
+
+  /* Hors horaires et son */
+  .nuit { position: fixed; inset: 0; background: var(--noir); z-index: 10; }
+  .son {
+    position: fixed; top: 11vh; left: 50%; transform: translateX(-50%); z-index: 30; cursor: pointer;
+    background: var(--son-fond); color: var(--son-texte); border: 0; border-radius: 99px; padding: 1.4vh 2.4vw; font: inherit; font-size: 2.4vh; font-weight: 700;
+  }
+  .alerte { position: fixed; top: 1vh; left: 50%; transform: translateX(-50%); z-index: 30; background: var(--alerte); color: var(--sur-alerte); padding: .8vh 1.6vw; border-radius: 99px; font-size: 2vh; }
+</style>
+</head>
+<body>
+<div class="ecran">
+  <header class="haut">
+    <div class="cabinet" id="cabinet"></div>
+    <div class="horloge"><span class="date" id="date"></span><span class="heure" id="heure"></span></div>
+  </header>
+
+  <main class="centre">
+    <div class="accueil" id="accueil">
+      <div class="bienvenue">Bienvenue</div>
+      <div class="nom-cabinet" id="accueil-cabinet"></div>
+    </div>
+    <img class="diapo" id="diapo-a" alt="">
+    <img class="diapo" id="diapo-b" alt="">
+    <section class="recents" id="recents" hidden>
+      <h2>Derniers appels</h2>
+      <ol id="liste-recents"></ol>
+    </section>
+  </main>
+
+  <footer class="bas">
+    <div class="salles" id="salles"></div>
+    <div class="messages" id="messages" hidden><div class="piste" id="piste"></div></div>
+  </footer>
+</div>
+
+<div class="appel" id="appel" hidden>
+  <div class="contenu">
+    <div class="nom" id="appel-nom"></div>
+    <div class="suite" id="appel-suite"></div>
+    <div class="salle" id="appel-salle"></div>
+    <div class="praticien" id="appel-praticien"></div>
+  </div>
+  <div class="progression" id="progression"></div>
+</div>
+
+<div class="nuit" id="nuit" hidden></div>
+<button class="son" id="son" hidden>Cliquer ici pour activer le son</button>
+<div class="alerte" id="alerte" hidden>Connexion au serveur perdue, reconnexion…</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let etat = null;
+  let decalage = 0;                 // écart horloge serveur - navigateur (s)
+  let dernierePassage = null;       // évite d'annoncer deux fois le même appel
+  const audio = new (window.AudioContext || window.webkitAudioContext)();
+
+  // ---------- Son : carillon + annonce vocale ----------
+  function verifierSon() { $("son").hidden = audio.state === "running"; }
+  $("son").addEventListener("click", async () => { await audio.resume(); verifierSon(); });
+  document.addEventListener("click", () => audio.resume().then(verifierSon));
+  setTimeout(verifierSon, 1500);
+
+  function carillon() {
+    const t0 = audio.currentTime + 0.05;
+    [[659.25, 0], [523.25, 0.6]].forEach(([freq, delai]) => {
+      [[1, 0.42], [2, 0.12], [3, 0.05]].forEach(([harmonique, volume]) => {
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq * harmonique;
+        gain.gain.setValueAtTime(0.0001, t0 + delai);
+        gain.gain.exponentialRampToValueAtTime(volume, t0 + delai + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + delai + 1.8);
+        osc.connect(gain).connect(audio.destination);
+        osc.start(t0 + delai);
+        osc.stop(t0 + delai + 1.9);
+      });
+    });
+    return new Promise((ok) => setTimeout(ok, 2200));
+  }
+
+  async function voixServeur(appel) {
+    const rep = await fetch(`/api/voix/${appel.id}`, { cache: "no-store" });
+    if (!rep.ok) throw new Error("indisponible");
+    const tampon = await audio.decodeAudioData(await rep.arrayBuffer());
+    const source = audio.createBufferSource();
+    source.buffer = tampon;
+    source.connect(audio.destination);
+    source.start();
+  }
+
+  function voixNavigateur(appel) {
+    if (!("speechSynthesis" in window)) return;
+    const phrase = new SpeechSynthesisUtterance(appel.vocal);
+    phrase.lang = "fr-FR";
+    phrase.rate = 0.92;
+    const voix = speechSynthesis.getVoices().find((v) => v.lang && v.lang.toLowerCase().startsWith("fr"));
+    if (voix) phrase.voice = voix;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(phrase);
+  }
+
+  async function annoncer(appel) {
+    await carillon();
+    if (etat && etat.voix_serveur) {
+      try { await voixServeur(appel); return; } catch (e) { /* repli navigateur */ }
+    }
+    voixNavigateur(appel);
+  }
+
+  // ---------- Horloge et horaires ----------
+  function horloge() {
+    const d = new Date();
+    $("heure").textContent = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const jour = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    $("date").textContent = jour.charAt(0).toUpperCase() + jour.slice(1);
+    if (etat) {
+      const hm = d.toTimeString().slice(0, 5);
+      const { debut, fin } = etat.horaires;
+      $("nuit").hidden = debut <= fin ? (hm >= debut && hm < fin) : (hm >= debut || hm < fin);
+      afficherMessages();
+    }
+  }
+  setInterval(horloge, 1000);
+
+  // ---------- Diaporama ----------
+  let images = [];
+  let indexDiapo = -1;
+  let versionDiapo = null;
+  let minuteurDiapo = null;
+  let diapoActive = $("diapo-a");
+
+  function diapoSuivante() {
+    if (!images.length) return;
+    indexDiapo = (indexDiapo + 1) % images.length;
+    const suivante = diapoActive === $("diapo-a") ? $("diapo-b") : $("diapo-a");
+    suivante.onload = () => {
+      suivante.classList.add("visible");
+      diapoActive.classList.remove("visible");
+      diapoActive = suivante;
+    };
+    suivante.src = images[indexDiapo];
+    // Précharge la suivante
+    if (images.length > 1) new Image().src = images[(indexDiapo + 1) % images.length];
+  }
+
+  function majDiaporama(e) {
+    const cle = `${e.diaporama.version}:${e.duree_diapo}`;
+    if (cle === versionDiapo) return;
+    versionDiapo = cle;
+    images = e.diaporama.images;
+    indexDiapo = -1;
+    clearInterval(minuteurDiapo);
+    minuteurDiapo = null;
+    $("accueil").hidden = images.length > 0;
+    if (!images.length) {
+      document.querySelectorAll(".diapo").forEach((d) => d.classList.remove("visible"));
+      return;
+    }
+    diapoSuivante();
+    if (images.length > 1) minuteurDiapo = setInterval(diapoSuivante, e.duree_diapo * 1000);
+    else minuteurDiapo = -1;
+  }
+
+  // ---------- Messages ----------
+  let texteMessages = null;
+  function afficherMessages() {
+    const aujourdhui = new Date().toLocaleDateString("sv-SE"); // AAAA-MM-JJ local
+    const actifs = etat.messages.filter((m) => !m.jusqu_au || m.jusqu_au >= aujourdhui).map((m) => m.texte);
+    const texte = actifs.join("   •   ");
+    if (texte === texteMessages) return;
+    texteMessages = texte;
+    $("messages").hidden = !texte;
+    const piste = $("piste");
+    piste.classList.remove("defile");
+    piste.style.animationDuration = "";
+    piste.replaceChildren(Object.assign(document.createElement("span"), { textContent: texte }));
+    requestAnimationFrame(() => {
+      if (piste.scrollWidth > $("messages").clientWidth) {
+        piste.append(Object.assign(document.createElement("span"), { textContent: texte }));
+        piste.classList.add("defile");
+        piste.style.animationDuration = `${piste.scrollWidth / 120}s`;
+      }
+    });
+  }
+
+  // ---------- Rendu de l'état ----------
+  // Mesure le nom à la taille maximale, puis le réduit juste assez pour tenir sur une ligne.
+  function ajusterNom() {
+    const nom = $("appel-nom");
+    nom.style.fontSize = "13vh";
+    const largeur = nom.scrollWidth;
+    const dispo = window.innerWidth * 0.9;
+    if (largeur > dispo) nom.style.fontSize = `${Math.max(5, 13 * dispo / largeur)}vh`;
+  }
+
+  function afficherAppel(e) {
+    const a = e.actuel;
+    if (!a) { $("appel").hidden = true; return; }
+    const cle = `${a.id}:${a.passage}`;
+    $("appel-nom").textContent = a.identite;
+    $("appel-suite").textContent = `est ${a.civilite === "Mme" ? "attendue" : "attendu"} en`;
+    $("appel-salle").textContent = `Salle ${a.salle}`;
+    $("appel-praticien").textContent = [a.pole, a.praticien].filter(Boolean).join(" · ");
+    $("appel").hidden = false;
+    ajusterNom();
+
+    const maintenant = Date.now() / 1000 + decalage;
+    const restant = Math.max(0, a.fin - maintenant);
+    const barre = $("progression");
+    barre.style.transition = "none";
+    barre.style.transform = `scaleX(${restant / e.duree_appel})`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      barre.style.transition = `transform ${restant}s linear`;
+      barre.style.transform = "scaleX(0)";
+    }));
+
+    if (cle !== dernierePassage) {
+      dernierePassage = cle;
+      if (maintenant - a.affiche_a < 8) annoncer(a);
+    }
+  }
+
+  function afficherRecents(e) {
+    const liste = e.recents.slice(0, 3);
+    $("recents").hidden = liste.length === 0;
+    $("liste-recents").replaceChildren(...liste.map((a) => {
+      const li = document.createElement("li");
+      li.append(Object.assign(document.createElement("span"), { className: "patient", textContent: a.identite }),
+                Object.assign(document.createElement("span"), { className: "salle", textContent: `Salle ${a.salle}` }));
+      return li;
+    }));
+  }
+
+  function afficherSalles(e) {
+    const elements = [];
+    let pole = null;
+    for (const s of e.salles.filter((x) => x.praticien)) {
+      if (s.pole && s.pole !== pole) {
+        elements.push(Object.assign(document.createElement("i"), { className: "pole", textContent: s.pole }));
+      }
+      pole = s.pole || null;
+      const span = document.createElement("span");
+      span.append(Object.assign(document.createElement("b"), { textContent: `Salle ${s.salle}` }), s.praticien);
+      elements.push(span);
+    }
+    $("salles").replaceChildren(...elements);
+  }
+
+  function rendre(e) {
+    etat = e;
+    decalage = e.maintenant - Date.now() / 1000;
+    $("cabinet").textContent = e.cabinet;
+    $("accueil-cabinet").textContent = e.cabinet;
+    majDiaporama(e);
+    afficherSalles(e);
+    afficherRecents(e);
+    afficherAppel(e);
+    horloge();
+  }
+
+  // ---------- Connexion temps réel ----------
+  let minuteurAlerte = null;
+  function connecter() {
+    const source = new EventSource("/evenements");
+    source.onmessage = (ev) => {
+      clearTimeout(minuteurAlerte); minuteurAlerte = null;
+      $("alerte").hidden = true;
+      rendre(JSON.parse(ev.data));
+    };
+    source.onerror = () => {
+      if (!minuteurAlerte) minuteurAlerte = setTimeout(() => { $("alerte").hidden = false; }, 5000);
+      if (source.readyState === EventSource.CLOSED) setTimeout(connecter, 3000);
+    };
+  }
+  connecter();
+  horloge();
+  // Les voix du navigateur se chargent de façon asynchrone.
+  if ("speechSynthesis" in window) speechSynthesis.getVoices();
+</script>
+</body>
+</html>

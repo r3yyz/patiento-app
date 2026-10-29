@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patiento</title>
+<link rel="stylesheet" href="/static/commun.css">
+<style>
+  .tuiles { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .tuiles a {
+    display: grid; gap: 6px; padding: 22px; border-radius: 12px; border: 1px solid var(--trait);
+    background: var(--carte); color: var(--encre); text-decoration: none;
+  }
+  .tuiles a:hover { border-color: var(--accent); background: var(--accent-clair); }
+  .tuiles strong { font-size: 1.15rem; color: var(--accent-fonce); }
+  .tuiles .icone {
+    width: 44px; height: 44px; padding: 10px; border-radius: 10px; margin-bottom: 6px;
+    background: var(--accent-clair); color: var(--accent);
+  }
+  .tuiles a:hover .icone { background: var(--accent); color: var(--sur-sombre); }
+  .tuiles a { align-content: start; box-shadow: var(--ombre); transition: background .15s, border-color .15s; }
+  .tuiles span { color: var(--doux); font-size: .92rem; }
+</style>
+</head>
+<body>
+<header class="entete">
+  <div class="titre">
+    <h1>Patiento</h1>
+    <span class="sous-titre" id="cabinet"></span>
+  </div>
+  <span class="etat-connexion" id="connexion">Connexion…</span>
+</header>
+<main class="page">
+  <div class="tuiles">
+    <a href="/appel"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a3 3 0 0 1 0 6"/><path d="M19 6a7 7 0 0 1 0 12"/></svg><strong>Appeler un patient</strong><span>Choisir sa salle et appeler.</span></a>
+    <a href="/contenus"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="m10 8 4 2-4 2z"/></svg><strong>Contenus de l'écran</strong><span>Diaporama, messages, salles et réglages.</span></a>
+    <a href="/ecran" target="_blank"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="13" rx="2"/><path d="M9 21h6"/><path d="M12 18v3"/></svg><strong>Écran de la salle d'attente</strong><span>Ce qu'affiche la TV (nouvel onglet).</span></a>
+  </div>
+</main>
+<script src="/static/commun.js"></script>
+<script>
+  ecouterEtat((e) => { document.getElementById("cabinet").textContent = e.cabinet; },
+              document.getElementById("connexion"));
+</script>
+</body>
+</html>
